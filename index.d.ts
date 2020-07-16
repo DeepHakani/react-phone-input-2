@@ -98,6 +98,11 @@ declare module "react-phone-input-2" {
     showDropdown?: boolean;
 
     defaultErrorMessage?: string;
+    listElement?: React.ComponentType<any>;
+    listItemElement?: React.ComponentType<any>;
+    rootClass?: string;
+    inputField?: React.ComponentType<any>;
+    toggleDropdown?: (showOptions: boolean, target?: HTMLElement) => void
   }
   const PhoneInput: React.FC<PhoneInputProps>;
   export default PhoneInput;

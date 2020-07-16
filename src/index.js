@@ -92,6 +92,11 @@ class PhoneInput extends React.Component {
       PropTypes.func,
     ]),
     defaultErrorMessage: PropTypes.string,
+
+    listElement: PropTypes.element,
+    listItemElement: PropTypes.element,
+    toggleDropdown: PropTypes.func,
+    inputField: PropTypes.element,
   }
 
   static defaultProps = {
@@ -454,6 +459,7 @@ class PhoneInput extends React.Component {
     let len = input.value.length;
     if (input.value.charAt(len-1)=== ')') len = len-1;
     input.setSelectionRange(len, len);
+    if (!!this.props.toggleDropdown) this.props.toggleDropdown(false, (event || {}).currentTarget)
   }
 
   getElement = (index) => {
@@ -487,6 +493,7 @@ class PhoneInput extends React.Component {
       if (this.state.showDropdown) {
         this.scrollTo(this.getElement(this.state.highlightCountryIndex));
       }
+      if (!!this.props.toggleDropdown) this.props.toggleDropdown(this.state.showDropdown, (event || {}).currentTarget)
     });
   }
 
@@ -506,11 +513,12 @@ class PhoneInput extends React.Component {
       const updatedInput = prefix+mainCode;
       if (value.slice(0, updatedInput.length) !== updatedInput) return;
     }
+    if (value === "") return this.setState({ formattedNumber: '' });
 
-    if (value === prefix) return this.setState({ formattedNumber: '' });
+    //if (value === prefix) return this.setState({ formattedNumber: '' });
 
     // Does not exceed 15 digit phone number limit
-    if (value.replace(/\D/g, '').length > 15 && !this.state.enableLongNumbers) return;
+    if (value.length > 15 && !this.state.enableLongNumbers) return;
 
     // if the input is the same as before, must be some special key like enter etc.
     if (value === this.state.formattedNumber) return;
@@ -570,6 +578,7 @@ class PhoneInput extends React.Component {
 
   handleInputClick = (e) => {
     this.setState({ showDropdown: false });
+    if (!!this.props.toggleDropdown) this.props.toggleDropdown(false, (event || {}).currentTarget)
     if (this.props.onClick) this.props.onClick(e, this.getCountryData());
   }
 
@@ -595,6 +604,7 @@ class PhoneInput extends React.Component {
     }, () => {
       this.cursorToEnd();
       if (this.props.onChange) this.props.onChange(formattedNumber.replace(/[^0-9]+/g,''), this.getCountryData(), e, formattedNumber);
+      if (!!this.props.toggleDropdown) this.props.toggleDropdown(false, (event || {}).currentTarget)
     });
   }
 
@@ -716,6 +726,7 @@ class PhoneInput extends React.Component {
   handleClickOutside = (e) => {
     if (this.dropdownRef && !this.dropdownContainerRef.contains(e.target)) {
       this.state.showDropdown && this.setState({ showDropdown: false });
+      if (!!this.props.toggleDropdown) this.props.toggleDropdown(false, (event || {}).currentTarget)
     }
   }
 
@@ -778,28 +789,33 @@ class PhoneInput extends React.Component {
         country: true,
         preferred: country.iso2 === 'us' || country.iso2 === 'gb',
         active: country.iso2 === 'us',
-        highlight
+        highlight,
       });
 
       const inputFlagClasses = `flag ${country.iso2}`;
 
+      let ListItemElement = this.props.listItemElement || ((props) => <li {...props}>{props.children}</li>)
+
       return (
-        <li
+        <ListItemElement
+          key={Math.random()}
           ref={el => this[`flag_no_${index}`] = el}
           key={`flag_no_${index}`}
           data-flag-key={`flag_no_${index}`}
           className={itemClasses}
           data-dial-code='1'
-          tabIndex={disableDropdown ? '-1' : '0'}
+          //tabIndex={disableDropdown ? '-1' : '0'}
           data-country-code={country.iso2}
-          onClick={(e) => this.handleFlagItemClick(country, e)}
-          role='option'
+          onClick={(e) => this.handleFlagItemClick(country, e)} 
+          //role='option'
           {... highlight ? { "aria-selected": true } : {}}
         >
-          <div className={inputFlagClasses}/>
-          <span className='country-name'>{this.getDropdownCountryName(country)}</span>
-          <span className='dial-code'>{country.format ? this.formatNumber(country.dialCode, country) : (prefix+country.dialCode)}</span>
-        </li>
+          
+            <div className={inputFlagClasses}/>
+            <span className='country-name'>{this.getDropdownCountryName(country)}</span>
+            <span className='dial-code'>{country.format ? this.formatNumber(country.dialCode, country) : (prefix+country.dialCode)}</span>
+          
+        </ListItemElement>
       );
     });
 
@@ -810,20 +826,17 @@ class PhoneInput extends React.Component {
 
     const dropDownClasses = classNames({
       [this.props.dropdownClass]: true,
-      'country-list': true,
+      'react-tel-input country-list': true,
       'hide': !showDropdown
     });
+    let ListElement = this.props.listElement || ((props) => <ul {...props}>{props.children}</ul>)
 
     return (
-      <ul
-        ref={el => {
-          !enableSearch && el && el.focus();
-          return (this.dropdownRef = el);
-        }}
+      <ListElement
         className={dropDownClasses}
         style={this.props.dropdownStyle}
         role='listbox'
-        tabIndex='0'
+        //tabIndex='0'
       >
         {enableSearch && (
           <li
@@ -865,7 +878,7 @@ class PhoneInput extends React.Component {
               <span>{searchNotFound}</span>
             </li>
           )}
-      </ul>
+      </ListElement>
     );
   }
 
@@ -889,7 +902,7 @@ class PhoneInput extends React.Component {
 
     const containerClasses = classNames({
       [this.props.containerClass]: true,
-      'react-tel-input': true,
+      'MuiInputBase-fullWidth react-tel-input ': true,
     });
     const arrowClasses = classNames({'arrow': true, 'up': showDropdown});
     const inputClasses = classNames({
@@ -909,55 +922,59 @@ class PhoneInput extends React.Component {
       'open': showDropdown,
     });
     const inputFlagClasses = `flag ${selectedCountry && selectedCountry.iso2}`;
-
+    let InputField = this.props.inputField || ((props) => <input {...props} />)
     return (
-      <div
-        className={containerClasses}
-        style={this.props.style || this.props.containerStyle}
-        onKeyDown={this.handleKeydown}>
-        {errorMessage && <div className='invalid-number-message'>{errorMessage}</div>}
-        <input
-          className={inputClasses}
-          style={this.props.inputStyle}
-          onChange={this.handleInput}
-          onClick={this.handleInputClick}
-          onDoubleClick={this.handleDoubleClick}
-          onFocus={this.handleInputFocus}
-          onBlur={this.handleInputBlur}
-          onCopy={this.handleInputCopy}
-          value={formattedNumber}
-          ref={el => this.numberInputRef = el}
-          onKeyDown={this.handleInputKeyDown}
-          placeholder={this.props.placeholder}
-          disabled={this.props.disabled}
-          type='tel'
-          {...this.props.inputProps}
-        />
-
+      <div className={"MuiInputBase-fullWidth react-tel-input"}>
+         { showDropdown && this.getCountryDropdownList()}
         <div
-          className={flagViewClasses}
-          style={this.props.buttonStyle}
-          ref={el => this.dropdownContainerRef = el}
-        >
-          {renderStringAsFlag ?
-          <div className={selectedFlagClasses}>{renderStringAsFlag}</div>
-          :
-          <div
-            onClick={disableDropdown ? undefined : this.handleFlagDropdownClick}
-            className={selectedFlagClasses}
-            title={selectedCountry ? `${selectedCountry.name}: + ${selectedCountry.dialCode}` : ''}
-            tabIndex={disableDropdown ? '-1' : '0'}
-            role='button'
-            aria-haspopup="listbox"
-            aria-expanded={showDropdown ? true : undefined}
-          >
-            <div className={inputFlagClasses}>
-              {!disableDropdown && <div className={arrowClasses}></div>}
-            </div>
-          </div>}
+          className={containerClasses}
+          style={this.props.style || this.props.containerStyle}
+          onKeyDown={this.handleKeydown}>
+          {errorMessage && <div className='invalid-number-message'>{errorMessage}</div>}
+          <InputField
+            className={inputClasses}
+            style={this.props.inputStyle}
+            onChange={this.handleInput}
+            onClick={this.handleInputClick}
+            onDoubleClick={this.handleDoubleClick}
+            onFocus={this.handleInputFocus}
+            onBlur={this.handleInputBlur}
+            onCopy={this.handleInputCopy}
+            value={formattedNumber}
+            //ref={el => this.numberInputRef = el}
+            inputRef={el => this.numberInputRef = el}
+            onKeyDown={this.handleInputKeyDown}
+            placeholder={this.props.placeholder}
+            disabled={this.props.disabled}
+            //error={true}
+            type='tel'
+            {...this.props.inputProps}
+          />
 
-          {showDropdown && this.getCountryDropdownList()}
+          <div
+            className={flagViewClasses}
+            style={this.props.buttonStyle}
+            ref={el => this.dropdownContainerRef = el}
+          >
+            {renderStringAsFlag ?
+            <div className={selectedFlagClasses}>{renderStringAsFlag}</div>
+            :
+            <div
+              onClick={disableDropdown ? undefined : this.handleFlagDropdownClick}
+              className={selectedFlagClasses}
+              title={selectedCountry ? `${selectedCountry.name}: + ${selectedCountry.dialCode}` : ''}
+              tabIndex={disableDropdown ? '-1' : '0'}
+              role='button'
+              aria-haspopup="listbox"
+              aria-expanded={showDropdown ? true : undefined}
+            >
+              <div className={inputFlagClasses}>
+                {!disableDropdown && <div className={arrowClasses}></div>}
+              </div>
+            </div>}
+          </div>
         </div>
+       
       </div>
     );
   }
