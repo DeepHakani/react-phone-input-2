@@ -10,7 +10,7 @@ Highly customizable phone input component with auto formatting.
 
 ## Installation
 ```shell-script
-npm install react-phone-input-2 --save
+npm install @thedeephakani/react-phone-input-2 --save
 ```
 
 ## Usage
