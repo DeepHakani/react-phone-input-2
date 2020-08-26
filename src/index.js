@@ -223,6 +223,7 @@ class PhoneInput extends React.Component {
       freezeSelection: false,
       debouncedQueryStingSearcher: debounce(this.searchCountry, 250),
       searchValue: '',
+      currentTarget:undefined
     };
   }
 
@@ -459,7 +460,7 @@ class PhoneInput extends React.Component {
     let len = input.value.length;
     if (input.value.charAt(len-1)=== ')') len = len-1;
     input.setSelectionRange(len, len);
-    if (!!this.props.toggleDropdown) this.props.toggleDropdown(false, (event || {}).currentTarget)
+    if (!!this.props.toggleDropdown) this.props.toggleDropdown(false, this.state.currentTarget)
   }
 
   getElement = (index) => {
@@ -489,11 +490,12 @@ class PhoneInput extends React.Component {
     this.setState({
       showDropdown: !this.state.showDropdown,
       highlightCountryIndex,
+      currentTarget:e.currentTarget
     }, () => {
       if (this.state.showDropdown) {
         this.scrollTo(this.getElement(this.state.highlightCountryIndex));
       }
-      if (!!this.props.toggleDropdown) this.props.toggleDropdown(this.state.showDropdown, (event || {}).currentTarget)
+      if (!!this.props.toggleDropdown) this.props.toggleDropdown(this.state.showDropdown, this.state.currentTarget)
     });
   }
 
@@ -578,7 +580,7 @@ class PhoneInput extends React.Component {
 
   handleInputClick = (e) => {
     this.setState({ showDropdown: false });
-    if (!!this.props.toggleDropdown) this.props.toggleDropdown(false, (event || {}).currentTarget)
+    if (!!this.props.toggleDropdown) this.props.toggleDropdown(false, this.state.currentTarget)
     if (this.props.onClick) this.props.onClick(e, this.getCountryData());
   }
 
@@ -604,7 +606,7 @@ class PhoneInput extends React.Component {
     }, () => {
       this.cursorToEnd();
       if (this.props.onChange) this.props.onChange(formattedNumber.replace(/[^0-9]+/g,''), this.getCountryData(), e, formattedNumber);
-      if (!!this.props.toggleDropdown) this.props.toggleDropdown(false, (event || {}).currentTarget)
+      if (!!this.props.toggleDropdown) this.props.toggleDropdown(false, this.state.currentTarget)
     });
   }
 
@@ -724,9 +726,10 @@ class PhoneInput extends React.Component {
   }
 
   handleClickOutside = (e) => {
-    if (this.dropdownRef && !this.dropdownContainerRef.contains(e.target)) {
+    const dropDownMenu = document.getElementsByClassName('MuiPaper-root')[0] || undefined;
+    if ( (!!dropDownMenu && !dropDownMenu.contains(e.target)) && !this.dropdownContainerRef.contains(e.target)) {
       this.state.showDropdown && this.setState({ showDropdown: false });
-      if (!!this.props.toggleDropdown) this.props.toggleDropdown(false, (event || {}).currentTarget)
+      if (!!this.props.toggleDropdown) this.props.toggleDropdown(false, this.state.currentTarget)
     }
   }
 
@@ -782,7 +785,7 @@ class PhoneInput extends React.Component {
     const { enableSearch, searchNotFound, disableSearchIcon, searchClass, searchStyle, searchPlaceholder, autocompleteSearch } = this.props;
 
     const searchedCountries = this.getSearchFilteredCountries()
-
+    console.log("start::",new Date());
     let countryDropdownList = searchedCountries.map((country, index) => {
       const highlight = highlightCountryIndex === index;
       const itemClasses = classNames({
@@ -798,7 +801,6 @@ class PhoneInput extends React.Component {
 
       return (
         <ListItemElement
-          key={Math.random()}
           ref={el => this[`flag_no_${index}`] = el}
           key={`flag_no_${index}`}
           data-flag-key={`flag_no_${index}`}
@@ -830,47 +832,16 @@ class PhoneInput extends React.Component {
       'hide': !showDropdown
     });
     let ListElement = this.props.listElement || ((props) => <ul {...props}>{props.children}</ul>)
-
+    console.log("END::",new Date());
     return (
       <ListElement
         className={dropDownClasses}
         style={this.props.dropdownStyle}
         role='listbox'
+        ref={el => this.dropDownMenu = el}
         //tabIndex='0'
       >
-        {enableSearch && (
-          <li
-            className={classNames({
-              search: true,
-              [searchClass]: searchClass,
-            })}
-          >
-            {!disableSearchIcon &&
-              <span
-                className={classNames({
-                  'search-emoji': true,
-                  [`${searchClass}-emoji`]: searchClass,
-                })}
-                role='img'
-                aria-label='Magnifying glass'
-              >
-                &#128270;
-              </span>}
-            <input
-              className={classNames({
-                'search-box': true,
-                [`${searchClass}-box`]: searchClass,
-              })}
-              style={searchStyle}
-              type='search'
-              placeholder={searchPlaceholder}
-              autoFocus={true}
-              autoComplete={autocompleteSearch ? 'on' : 'off'}
-              value={searchValue}
-              onChange={this.handleSearchChange}
-            />
-          </li>
-        )}
+        
         {countryDropdownList.length > 0
           ? countryDropdownList
           : (
@@ -925,7 +896,7 @@ class PhoneInput extends React.Component {
     let InputField = this.props.inputField || ((props) => <input {...props} />)
     return (
       <div className={"MuiInputBase-fullWidth react-tel-input"}>
-         { showDropdown && this.getCountryDropdownList()}
+        { showDropdown && this.getCountryDropdownList()}
         <div
           className={containerClasses}
           style={this.props.style || this.props.containerStyle}
@@ -960,13 +931,11 @@ class PhoneInput extends React.Component {
             <div className={selectedFlagClasses}>{renderStringAsFlag}</div>
             :
             <div
-              onClick={disableDropdown ? undefined : this.handleFlagDropdownClick}
+              onClick={this.handleFlagDropdownClick}
               className={selectedFlagClasses}
-              title={selectedCountry ? `${selectedCountry.name}: + ${selectedCountry.dialCode}` : ''}
               tabIndex={disableDropdown ? '-1' : '0'}
               role='button'
               aria-haspopup="listbox"
-              aria-expanded={showDropdown ? true : undefined}
             >
               <div className={inputFlagClasses}>
                 {!disableDropdown && <div className={arrowClasses}></div>}
